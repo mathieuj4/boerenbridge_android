@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boerenbridge</title>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#14181d; --panel:#1d232b; --panel2:#252d37; --line:#323c48; --text:#e8ecf0; --muted:#97a3b0;
+  --felt:#1f5a40; --felt2:#174631; --accent:#f2c14e; --good:#5fc58a; --bad:#ef7b6e; --card:#fbfaf5; --ink:#1a1d21; --red:#c8312b;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line)}
+header h1{font-size:18px;margin:0;font-weight:650;letter-spacing:.2px}
+header .sp{flex:1}
+button{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 14px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--muted)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:var(--accent);color:#2a2105;border-color:var(--accent);font-weight:650}
+option{background:#252d37;color:#e8ecf0}
+select,input{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;padding:16px 20px;max-width:1560px;margin:0 auto}
+@media(max-width:980px){.wrap{grid-template-columns:1fr}}
+.table{display:flex;flex-direction:column;gap:10px;min-width:0}
+.felt{position:relative;height:clamp(420px,calc(100vh - 410px),820px);border-radius:26px;border:1px solid #0e2d20;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 47%,#237052 0%,var(--felt) 45%,var(--felt2) 100%);box-shadow:inset 0 0 60px rgba(0,0,0,.35)}
+.ngon{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.ngon polygon{fill:rgba(0,0,0,.07);stroke:rgba(255,255,255,.16);stroke-width:1.5;stroke-dasharray:5 6}
+.idle{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600}
+.badge{position:absolute;left:16px;top:14px;background:rgba(0,0,0,.3);border-radius:12px;padding:8px 12px;font-size:13.5px;color:#dcece3;z-index:2}
+.badge .tr{display:flex;align-items:center;gap:8px;margin-top:4px}
+.plate{position:absolute;transform:translate(-50%,-50%);min-width:158px;text-align:center;z-index:3}
+.plate .nm{justify-content:center}
+.plate.mine{border-color:rgba(255,255,255,.18)}
+.played{position:absolute;transform:translate(-50%,-50%) rotate(var(--r));z-index:2}
+.played .card{width:72px;height:104px;font-size:22px}
+.played.win .card{outline:3px solid var(--accent)}
+.played .lead{position:absolute;left:50%;top:-18px;transform:translateX(-50%) rotate(calc(var(--r) * -1));font-size:11px;color:#cfe3d8;white-space:nowrap}
+.played .lead.w{color:var(--accent);font-weight:700}
+.status{min-height:30px;text-align:center;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.status.you{color:var(--accent)}
+.opps{display:grid;gap:12px}
+.seat{background:rgba(0,0,0,.28);border-radius:12px;padding:10px 14px;border:2px solid transparent;transition:border-color .2s}
+.seat.turn{border-color:var(--accent)}
+.seat .nm{font-weight:650;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.seat .st{color:#cfe3d8;font-size:14px;margin-top:2px}
+.chip{font-size:11px;padding:1px 7px;border-radius:99px;background:rgba(255,255,255,.14);color:#e9f2ed}
+.chip.d{background:var(--accent);color:#2a2105;font-weight:700}
+.dots::after{content:"";display:inline-block;width:1.5em;text-align:left;animation:dots 1.1s steps(4,end) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:210px}
+.trumpbox{display:flex;align-items:center;gap:10px;color:#dcece3;font-size:14px}
+.trick{display:grid;gap:14px;justify-content:center}
+.slot{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:128px}
+.slot .who{font-size:12px;color:#cfe3d8;text-align:center;max-width:92px;min-height:30px;display:flex;align-items:flex-end;justify-content:center}
+.slot.win .who{color:var(--accent);font-weight:700}
+.slot.win .card{outline:3px solid var(--accent)}
+.card{width:64px;height:92px;border-radius:8px;background:var(--card);color:var(--ink);display:flex;flex-direction:column;justify-content:space-between;padding:5px 7px;font-weight:700;font-size:20px;box-shadow:0 2px 6px rgba(0,0,0,.35);user-select:none;position:relative}
+.card.red{color:var(--red)}
+.card .s{font-size:26px;align-self:flex-end;line-height:1}
+.card.sm{width:34px;height:48px;font-size:13px;padding:2px 4px;border-radius:5px}
+.card.sm .s{font-size:15px}
+.card.empty{background:transparent;border:2px dashed rgba(255,255,255,.2);box-shadow:none}
+.msg{min-height:26px;text-align:center;font-size:16px;font-weight:600}
+.msg.you{color:var(--accent)}
+.me{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:12px 14px}
+.me.turn{border-color:var(--accent)}
+.hand{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;min-height:96px}
+.hand .card{cursor:default;transition:transform .08s;width:76px;height:110px;font-size:23px}
+.hand .card .s{font-size:30px}
+.hand .card.ok{cursor:pointer;outline:2px solid rgba(242,193,78,.45)}
+.hand .card.ok:hover{transform:translateY(-8px);outline-color:var(--accent)}
+.hand .card.no{opacity:.4}
+.bidrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.bidrow button{min-width:42px}
+.side{display:flex;flex-direction:column;gap:12px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.box h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:650}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:4px 6px;text-align:right;font-size:13px}
+table.tight th,table.tight td{font-size:12px;padding:4px 3px}
+th{color:var(--muted);font-weight:600;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+td.hit{color:var(--good)} td.miss{color:var(--bad)}
+tfoot td{border-top:1px solid var(--line);font-weight:700}
+.overlay{position:fixed;inset:0;background:rgba(5,8,10,.62);display:flex;align-items:center;justify-content:center;padding:16px;z-index:5}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px 22px;max-width:560px;width:100%;max-height:92vh;overflow:auto}
+.modal h2{margin:0 0 4px;font-size:20px}
+.modal .sub{color:var(--muted);margin-bottom:12px}
+.row{display:flex;gap:12px;align-items:center;margin:10px 0;flex-wrap:wrap}
+.row label{width:120px;color:var(--muted);font-size:13px}
+.row select,.row input{flex:1;min-width:180px}
+.desc{color:var(--muted);font-size:12.5px;margin:-4px 0 6px 132px}
+.hands{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.hands .h{display:flex;gap:6px;align-items:center}
+.hands .h b{width:130px;font-size:13px}
+.hands .cards{display:flex;gap:3px;flex-wrap:wrap}
+.right{text-align:right;margin-top:14px;display:flex;justify-content:flex-end;gap:8px}
+.hint{color:var(--muted);font-size:12.5px}
+.err{white-space:pre-wrap;font:12px/1.4 ui-monospace,monospace;color:var(--bad)}
+@media(max-width:640px){
+  body{font-size:14px}
+  header{padding:8px 12px;gap:8px} header h1{font-size:16px} #sub{display:none}
+  button{padding:9px 12px}
+  .wrap{padding:8px 8px 20px;gap:10px}
+  .felt{height:clamp(300px,50vh,460px);border-radius:18px}
+  .badge{left:8px;top:8px;padding:5px 8px;font-size:11.5px;border-radius:9px}
+  .badge .tr{margin-top:2px;gap:5px} .badge .card.sm{width:26px;height:37px;font-size:11px}
+  .plate{min-width:0;width:118px;font-size:12.5px;padding:6px 8px !important}
+  .plate .st{font-size:12px}
+  .played .card{width:50px;height:72px;font-size:16px} .played .card .s{font-size:19px}
+  .played .lead{display:none}
+  .status,.msg{font-size:14.5px}
+  .me{padding:10px}
+  .hand{gap:5px;justify-content:center}
+  .hand .card{width:56px;height:82px;font-size:18px} .hand .card .s{font-size:23px}
+  .bidrow button{min-width:46px;min-height:44px;font-size:16px}
+  .modal{padding:16px} .row label{width:100%} .row select,.row input{min-width:0;width:100%}
+  .desc{margin:-2px 0 4px 0}
+  .overlay{padding:8px}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Boerenbridge</h1><span class="hint" id="sub">3 or 4 players · hook rule</span>
+  <span class="sp"></span>
+  <button id="rulesBtn">Rules</button>
+  <button id="newBtn" class="primary">New game</button>
+</header>
+<div class="wrap">
+  <div class="table" id="table"></div>
+  <div class="side">
+    <div class="box"><h3>Scoreboard</h3><div id="score"></div></div>
+  </div>
+</div>
+<div id="modalRoot"></div>
+
+<script>
+const SYM={C:"♣",D:"♦",S:"♠",H:"♥"}, SUITNAME={C:"clubs",D:"diamonds",S:"spades",H:"hearts"};
+const RANK={11:"J",12:"Q",13:"K",14:"A"};
+const rk=r=>RANK[r]||String(r);
+const ORDER={S:0,H:1,C:2,D:3};
+const $=id=>document.getElementById(id);
+let ST={status:"idle"}, BOTS=/*BOTS*/[], lastKey="", setupOpen=false, showResult=true, modalKind=null, rulesOpen=false;
+
+function cardEl(c,cls=""){
+  const red=(c[0]==="D"||c[0]==="H");
+  return `<div class="card ${red?"red":""} ${cls}"><span>${rk(c[1])}</span><span class="s">${SYM[c[0]]}</span></div>`;
+}
+const SUIT_COLOR={C:"b",S:"b",D:"r",H:"r"};
+function suitOrder(trump){
+  // trump is always the right-most suit; the other suits alternate black/red so neighbours differ in colour
+  // (with two suits per colour this is always possible): [opposite colour, same colour as trump, opposite colour, trump]
+  if(!trump) return ["S","H","C","D"];
+  const same=Object.keys(SUIT_COLOR).filter(x=>x!==trump&&SUIT_COLOR[x]===SUIT_COLOR[trump]);
+  const opp=["S","C","H","D"].filter(x=>SUIT_COLOR[x]!==SUIT_COLOR[trump]);
+  return [opp[0],same[0],opp[1],trump];
+}
+function sortHand(h,trump){
+  const ord=suitOrder(trump);
+  return [...h].sort((a,b)=>ord.indexOf(a[0])-ord.indexOf(b[0])||b[1]-a[1]);
+}
+async function api(path,body){
+  const r=await fetch(path,{method:body?"POST":"GET",headers:{"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined});
+  return r.json();
+}
+
+function posOf(seat){ // 0 = me, 1 = left opponent, 2 = right opponent (play order runs me -> left -> right)
+  return (seat-ST.me+3)%3;
+}
+function renderTable(){
+  const s=ST;
+  if(s.n) $("sub").textContent=`${s.n} players · ${s.n_rounds} rounds · hook rule`;
+  if(s.status==="idle"){ $("table").innerHTML=`<div class="felt"><div class="idle">Choose your opponents to start a game.</div></div>`; return; }
+  const n=s.n, me=s.me;
+  // seats sit on the corners of a regular n-gon with me at the bottom; play runs clockwise (bottom -> left -> top -> right)
+  const CX=50, CY=47, RX=38, RY=40;
+  const corner=seat=>{ const k=(seat-me+n)%n, th=(90+k*360/n)*Math.PI/180; return {x:CX+RX*Math.cos(th), y:CY+RY*Math.sin(th), k}; };
+  const poly=[...Array(n).keys()].map(seat=>{const c=corner(seat); return c.x+","+c.y;}).join(" ");
+  const plate=i=>{
+    const c=corner(i), bid=s.bids[i], won=s.tricks_won[i];
+    let st;
+    if(bid===undefined) st = s.thinking===i ? `<span class="dots">bidding</span>` : "–";
+    else st=`bid <b>${bid}</b> · won <b>${won}</b>`+(s.thinking===i?` · <span class="dots">thinking</span>`:"");
+    return `<div class="seat plate ${s.turn===i?"turn":""} ${i===me?"mine":""}" style="left:${c.x}%;top:${c.y}%"><div class="nm">${s.names[i]}${s.dealer===i?'<span class="chip d">dealer</span>':""}</div><div class="st">${st}</div></div>`;
+  };
+  const lead=(s.leader===null||s.leader===undefined)?((s.dealer===null||s.dealer===undefined)?0:(s.dealer+1)%n):s.leader;
+  const tilt=[-5,4,-3,6,-6,3];
+  // each card lies on the table in front of the player who played it, between the seat and the middle
+  const cards=s.trick.map(([seat,card])=>{
+    const c=corner(seat), T=0.52;
+    const x=CX+T*(c.x-CX), y=CY+T*(c.y-CY), win=s.trick_winner===seat;
+    const r=tilt[(seat+s.round_index)%tilt.length];
+    return `<div class="played ${win?"win":""}" style="left:${x}%;top:${y}%;--r:${r}deg">${cardEl(card)}${seat===lead&&!win?'<span class="lead">leads</span>':""}${win?'<span class="lead w">wins</span>':""}</div>`;
+  }).join("");
+  const trumpTxt = s.round_index<0 ? "" : (s.trump ? `Trump <span style="font-size:20px;${(s.trump==="D"||s.trump==="H")?"color:#ff958c":""}">${SYM[s.trump]}</span> ${SUITNAME[s.trump]}` : "No trump");
+  const tc = s.trump_card ? cardEl(s.trump_card,"sm") : "";
+  const badge = s.round_index>=0 ? `<div class="badge"><div>Round ${s.round_index+1} of ${s.n_rounds} · ${s.n_cards} card${s.n_cards>1?"s":""}</div><div class="tr">${trumpTxt} ${tc}</div></div>` : "";
+  let msg="",you=false;
+  const p=s.prompt;
+  if(s.status==="finished") msg="Game over";
+  else if(p&&p.type==="bid"){ msg="Your bid: how many tricks will you win?"; you=true; }
+  else if(p&&p.type==="play"){ msg= s.trick.length? "Your turn: follow suit if you can" : "You lead: play a card"; you=true; }
+  else if(p&&p.type==="next") msg="Round finished";
+  else if(s.thinking!==null&&s.thinking!==undefined) msg=`${s.names[s.thinking]} is thinking…`;
+  else if(s.trick_winner!==null&&s.trick_winner!==undefined) msg=`${s.names[s.trick_winner]} takes the trick`;
+  let bidUI="";
+  if(p&&p.type==="bid"){
+    const sumSoFar=Object.values(s.bids).reduce((a,b)=>a+b,0);
+    let b=""; for(let i=0;i<=p.n;i++){
+      const dis=i===p.forbidden;
+      b+=`<button data-bid="${i}" ${dis?'disabled title="Hook rule: this would make all bids add up to '+p.n+'"':""}>${i}</button>`;
+    }
+    bidUI=`<div class="bidrow">${b}</div><div class="hint" style="margin-top:6px">${p.n} tricks on the table; bids so far total ${sumSoFar}.${p.forbidden!==null?` Hook rule: you may not bid ${p.forbidden}.`:""}</div>`;
+  }
+  const legal=p&&p.type==="play"?p.legal.map(c=>c[0]+c[1]):null;
+  let prevSuit=null;
+  const hand=sortHand(s.hand,s.trump).map(c=>{
+    const ok=legal&&legal.includes(c[0]+c[1]);
+    const gap=prevSuit!==null&&prevSuit!==c[0]?' style="margin-left:16px"':"";     // a little space between suits
+    prevSuit=c[0];
+    return cardEl(c, legal? (ok?"ok":"no") : "").replace("<div class=\"card",`<div data-c="${c[0]}${c[1]}"${gap} class="card`);
+  }).join("");
+  $("table").innerHTML=`
+    <div class="felt">
+      <svg class="ngon" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="${poly}" vector-effect="non-scaling-stroke"/></svg>
+      ${badge}
+      ${[...Array(n).keys()].map(plate).join("")}
+      ${cards}
+    </div>
+    <div class="status ${you?"you":""}">${msg}</div>
+    <div class="me ${s.turn===me?"turn":""}">${bidUI}<div class="hand">${hand||'<span class="hint">Your cards appear here when it is your turn to bid.</span>'}</div></div>`;
+  document.querySelectorAll("[data-bid]").forEach(b=>b.onclick=async()=>{await api("/api/bid",{bid:+b.dataset.bid}); poll();});
+  document.querySelectorAll(".hand .card.ok").forEach(el=>el.onclick=()=>{
+    const k=el.dataset.c; (async()=>{await api("/api/play",{card:[k[0],+k.slice(1)]}); poll();})();
+  });
+}
+
+function renderScore(){
+  const s=ST; if(s.status==="idle"){ $("score").innerHTML='<div class="hint">No game yet.</div>'; return; }
+  const n=s.names;
+  let rows=s.history.map(h=>{
+    const cell=i=>`<td class="${h.bids[i]===h.won[i]?"hit":"miss"}" title="bid ${h.bids[i]}, won ${h.won[i]}">${h.bids[i]}/${h.won[i]} <b>${h.points[i]>0?"+":""}${h.points[i]}</b></td>`;
+    return `<tr><td>${h.n_cards}${h.trump?SYM[h.trump]:"∅"}</td>${n.map((_,i)=>cell(i)).join("")}</tr>`;
+  }).join("");
+  $("score").innerHTML=`<table class="${n.length>3?"tight":""}"><thead><tr><th>Round</th>${n.map(x=>`<th>${x.replace(/ \(.*/,"")}</th>`).join("")}</tr></thead>
+    <tbody>${rows||'<tr><td colspan="4" class="hint">First round in progress…</td></tr>'}</tbody>
+    <tfoot><tr><td>Total</td>${s.scores.map(x=>`<td>${x}</td>`).join("")}</tr></tfoot></table>
+    <div class="hint" style="margin-top:8px">Cells: bid/won and points. Green = exact.</div>`;
+}
+
+function modalKindNow(){
+  const s=ST;
+  if(rulesOpen) return "rules";
+  if(setupOpen) return "setup";
+  if(s.status==="error") return "error";
+  if(s.status==="finished") return showResult?"final":"";
+  if(s.prompt&&s.prompt.type==="next"&&s.round_result) return "round"+s.round_result.round;
+  return "";
+}
+function renderModal(){
+  // only rebuild the dialog when WHICH dialog is showing changes; rebuilding on every poll would
+  // close an open dropdown and reset what the user just picked
+  const kind=modalKindNow();
+  if(kind===modalKind) return;
+  modalKind=kind;
+  const s=ST; let html="";
+  if(setupOpen){
+    const opts=BOTS.map(b=>`<option value="${b.key}">${b.label}</option>`).join("");
+    if(!BOTS.length) html=`<div class="overlay"><div class="modal"><h2>No opponents loaded</h2><div class="sub">The page could not get the list of bots from the server. Make sure <b>play.py</b> is still running in your terminal, then reload this page (Ctrl+F5).</div><div class="right"><button class="primary" onclick="location.reload()">Reload</button></div></div></div>`;
+    else html=`<div class="overlay"><div class="modal"><h2>New game</h2><div class="sub">36 cards. Rounds go from 1 card up to the maximum with trump (10 cards with 3 players, 8 with 4), then one more round of the maximum without trump.</div>
+      <div class="row"><label>Players</label><select id="np"><option value="3">3 players (11 rounds)</option><option value="4">4 players (9 rounds)</option></select></div>
+      <div class="row"><label>Opponent 1</label><select id="o1">${opts}</select></div><div class="desc" id="d1"></div>
+      <div class="row"><label>Opponent 2</label><select id="o2">${opts}</select></div><div class="desc" id="d2"></div>
+      <div id="o3wrap"><div class="row"><label>Opponent 3</label><select id="o3">${opts}</select></div><div class="desc" id="d3"></div></div>
+      <div class="row"><label>Speed</label><select id="speed"><option value="fast">Fast</option><option value="normal" selected>Normal</option><option value="slow">Slow</option></select></div>
+      <div class="row"><label>Your seat</label><select id="seat"><option value="random">Random</option><option value="0">First</option><option value="1">Second</option><option value="2">Third</option><option value="3" id="seat4">Fourth</option></select></div>
+      <div class="row"><label>Seed (optional)</label><input id="seed" placeholder="same seed = same deals"></div>
+      <div class="right">${s.status!=="idle"?'<button id="cancel">Cancel</button>':""}<button class="primary" id="start">Start</button></div></div></div>`;
+  } else if(s.status==="error"){
+    html=`<div class="overlay"><div class="modal"><h2>Something went wrong</h2><div class="err">${s.error.replace(/</g,"&lt;")}</div><div class="right"><button class="primary" id="again">New game</button></div></div></div>`;
+  } else if(s.status==="finished"){
+    const w=s.final.winners.map(i=>s.names[i]);
+    const you=s.final.winners.includes(s.me);
+    html=`<div class="overlay"><div class="modal"><h2>${you?(w.length>1?"You tied for first":"You win!"):w.join(" & ")+" wins"}</h2>
+      <div class="sub">Final scores</div><table><tbody>${s.final.scores.map((x,i)=>[x,i]).sort((a,b)=>b[0]-a[0]||a[1]-b[1]).map(([x,i],k)=>`<tr><td>${k+1}. ${s.names[i]}</td><td><b>${x}</b></td></tr>`).join("")}</tbody></table>
+      <div class="right"><button id="closeRes">Look at the table</button><button class="primary" id="again">Play again</button></div></div></div>`;
+    if(!showResult) html="";
+  } else if(s.prompt&&s.prompt.type==="next"&&s.round_result){
+    const r=s.round_result;
+    const rank=s.names.map((_,i)=>i).sort((a,b)=>s.scores[b]-s.scores[a]||r.points[b]-r.points[a]||a-b);   // leader on the running total at the top
+    const hands=rank.map(i=>`<div class="h"><b>${s.names[i]}</b><div class="cards">${sortHand(r.hands[i],r.trump).map(c=>cardEl(c,"sm")).join("")}</div></div>`).join("");
+    const rows=rank.map(i=>`<tr><td>${s.names[i]}</td><td>${r.bids[i]}</td><td>${r.won[i]}</td><td class="${r.bids[i]===r.won[i]?"hit":"miss"}"><b>${r.points[i]>0?"+":""}${r.points[i]}</b></td><td>${s.scores[i]}</td></tr>`).join("");
+    html=`<div class="overlay"><div class="modal"><h2>Round ${r.round+1} result</h2><div class="sub">${r.n_cards} card${r.n_cards>1?"s":""} · ${r.trump?"trump "+SYM[r.trump]:"no trump"}</div>
+      <table><thead><tr><th></th><th>Bid</th><th>Won</th><th>Points</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="hint" style="margin-top:12px">Starting hands</div><div class="hands">${hands}</div>
+      <div class="right"><button class="primary" id="nextBtn">${r.last?"See final result":"Next round"}</button></div></div></div>`;
+  }
+  $("modalRoot").innerHTML=html;
+  if($("o1")){
+    const fill=()=>{ for(const k of ["1","2","3"]) $("d"+k).textContent=(BOTS.find(b=>b.key===$("o"+k).value)||{}).desc||""; };
+    const players=()=>+$("np").value;
+    const layout=()=>{ const four=players()===4; $("o3wrap").style.display=four?"":"none"; $("seat4").disabled=!four; $("seat4").hidden=!four;
+                       if(!four && $("seat").value==="3") $("seat").value="random"; };
+    const keys=BOTS.map(b=>b.key), pick=(k,d)=>keys.includes(k)?k:(keys.includes(d)?d:keys[0]);
+    let sv1,sv2,sv3,svn; try{sv1=localStorage.bb_o1;sv2=localStorage.bb_o2;sv3=localStorage.bb_o3;svn=localStorage.bb_n;}catch(e){}
+    $("o1").value=pick(sv1,"heuristic"); $("o2").value=pick(sv2,"ismcts-adaptive"); $("o3").value=pick(sv3,"ismcts");
+    $("np").value=(svn==="4")?"4":"3"; layout(); fill();
+    $("o1").onchange=$("o2").onchange=$("o3").onchange=fill;
+    $("np").onchange=layout;
+    $("start").onclick=async()=>{
+      const np=players();
+      const o=[$("o1").value,$("o2").value].concat(np===4?[$("o3").value]:[]);
+      try{localStorage.bb_o1=$("o1").value; localStorage.bb_o2=$("o2").value; localStorage.bb_o3=$("o3").value; localStorage.bb_n=String(np);}catch(e){}
+      const seat=$("seat").value==="random"?-1:+$("seat").value;
+      setupOpen=false; showResult=true; modalKind=null; lastKey="";
+      await api("/api/new",{players:np,opponents:o,seat,speed:$("speed").value,seed:$("seed").value});
+      poll();
+    };
+    if($("cancel")) $("cancel").onclick=()=>{setupOpen=false;modalKind=null;lastKey="";renderAll();};
+  }
+  if($("nextBtn")) $("nextBtn").onclick=async()=>{await api("/api/next",{}); poll();};
+  if($("again")) $("again").onclick=()=>{setupOpen=true;modalKind=null;lastKey="";renderAll();};
+  if($("closeRes")) $("closeRes").onclick=()=>{showResult=false;modalKind=null;renderAll();};
+}
+function renderAll(){ renderTable(); renderScore(); renderModal(); }
+
+async function poll(){
+  try{
+    const s=await api("/api/state");
+    const key=JSON.stringify(s)+setupOpen+showResult;
+    if(key!==lastKey){ lastKey=key; ST=s; renderAll(); }
+  }catch(e){}
+}
+$("newBtn").onclick=()=>{setupOpen=true;modalKind=null;lastKey="";renderAll();};
+$("rulesBtn").onclick=()=>{
+  rulesOpen=true; modalKind="rules";
+  $("modalRoot").innerHTML=`<div class="overlay"><div class="modal"><h2>Rules</h2><div class="sub">As implemented in the engine</div>
+  <ul style="padding-left:18px;margin:0 0 8px"><li>36 cards (6 to A), 3 or 4 players. Round 1 deals 1 card each, round 2 deals 2, and so on up to 10 cards (3 players, 11 rounds) or 8 cards (4 players, 9 rounds); then one more round of that size <b>without trump</b>.</li>
+  <li>With trump, the next card of the stack is flipped and its suit is trump.</li>
+  <li>Everyone bids how many tricks they will win. The dealer bids last.</li>
+  <li><b>Hook rule</b> (3+ cards): the last bidder may not bid the number that makes all bids add up to the tricks on the table.</li>
+  <li>Player left of the dealer leads trick 1; the trick winner leads next. Follow suit if you can. Highest trump wins, otherwise the highest card of the led suit.</li>
+  <li>Score: exactly right = 10 + 3 per trick bid; otherwise −3 per trick you are off.</li></ul>
+  <div class="right"><button class="primary" id="rc">Close</button></div></div></div>`;
+  $("rc").onclick=()=>{rulesOpen=false;modalKind=null;lastKey="";renderAll();};
+};
+(async()=>{ if(!BOTS.length){ try{ BOTS=await api("/api/bots"); }catch(e){} } ST={status:"idle"}; setupOpen=true; renderAll(); setInterval(poll,300); })();
+</script>
+</body>
+</html>
